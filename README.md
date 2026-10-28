@@ -66,5 +66,75 @@ To prevent data leakage, the dataset was split prior to any fitting operations:
 - **Target Variable**: `Exited` (Binary classification: 0 for retention, 1 for churn)
 - **Goal**: Isolate and target the top 15% high-risk churn customers
 
+## 🚀 Live Demo
+
+Try the deployed application here:
+
+[**Bank Customer Churn Prediction — Open App**](https://bank-customer-churn-prediction-atalpbeoaf97cyeksxxx9s.streamlit.app/)
+
+The application uses a trained Random Forest model to predict customer churn based on customer information.
+
+---
+
+## 🤖 Milestone 4: Modeling and Evaluation
+
+In this milestone, multiple machine learning models were trained and evaluated to identify the best-performing model for predicting bank customer churn.
+
+### 🧠 Models Trained
+
+- Logistic Regression
+- K-Nearest Neighbors (KNN)
+- Decision Tree
+- Random Forest
+
+### ⚙️ Model Training and Selection
+
+- **Train/Test Split:** 80% training data and 20% testing data.
+- **Cross-Validation:** Stratified 5-fold cross-validation was used to compare model performance.
+- **Model Selection:** Random Forest was selected based on its highest mean cross-validation F1-score.
+- **Preprocessing:** Numerical and categorical preprocessing steps were integrated into machine learning pipelines to help prevent data leakage.
+
+### 📊 Final Model Performance
+
+The selected Random Forest model was evaluated on the independent test set.
+
+| Metric | Score |
+|---|---:|
+| Accuracy | 85.40% |
+| Precision | 74.89% |
+| Recall | 42.51% |
+| F1-Score | 54.23% |
+| ROC-AUC | 85.24% |
+
+These results show that the model performs well overall, but its recall indicates that some customers who are likely to churn are still missed.
+
+### 💾 Saved Model and Results
+
+- **`Modeling.ipynb`**: Model training, cross-validation, comparison, and evaluation.
+- **`best_churn_model.joblib`**: Saved trained model pipeline used by the application.
+- **`model_comparison_results.csv`**: Cross-validation model comparison results.
+- **`final_test_results.csv`**: Final evaluation results on the test set.
+
+---
+
+## 🌐 Deployment
+
+The project was deployed as an interactive web application using Streamlit.
+
+- **`app.py`**: Application code for entering customer information and generating predictions.
+- **`requirements.txt`**: Python dependencies required to run the application.
+- **Live Application:** [Open Bank Customer Churn Prediction](https://bank-customer-churn-prediction-atalpbeoaf97cyeksxxx9s.streamlit.app/)
+
+Users can enter customer information, run the prediction, and view the predicted churn result and churn probability.
+
+---
+
+## 🎯 Project Outcome
+
+This project demonstrates an end-to-end machine learning workflow, including data cleaning, exploratory data analysis, feature engineering, preprocessing, model training, evaluation, and deployment.
+
+The goal is to help identify customers who may be at risk of leaving the bank and support data-driven customer retention decisions.
+
+
 ## 👤 Author
 - **Hiba Mukaram Mahmoud** (Team 6)
