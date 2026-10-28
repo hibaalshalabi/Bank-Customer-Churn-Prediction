@@ -124,9 +124,16 @@ with st.form("customer_form"):
                     value=float(series.median())
                 )
 
+        
         else:
-            st.warning(f"Unsupported data type for {column}.")
-            st.stop()
+            # Treat remaining columns as categorical inputs
+            options = series.astype(str).unique().tolist()
+
+            customer_values[column] = st.selectbox(
+                column,
+                options=options
+            )
+
 
     submitted = st.form_submit_button(
         "Predict Customer Churn",
