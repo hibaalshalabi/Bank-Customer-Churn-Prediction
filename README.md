@@ -103,7 +103,7 @@ The selected Random Forest model was evaluated on the independent test set.
 | Accuracy | 85.40% |
 | Precision | 74.89% |
 | Recall | 42.51% |
-| F1-Score | 54.23% |
+| F1-Score | 54.04% |
 | ROC-AUC | 85.24% |
 
 These results show that the model performs well overall, but its recall indicates that some customers who are likely to churn are still missed.
