@@ -1,4 +1,3 @@
-
 import os
 import joblib
 import pandas as pd
@@ -19,7 +18,7 @@ MODEL_PATH = "best_churn_model.joblib"
 DATA_PATH = "Churn_Modelling_Featured.csv"
 
 # ------------------------------------------------------------
-# CUSTOM DESIGN
+# CUSTOM DESIGN & CSS (مع حل مشكلة النصوص والخطوط)
 # ------------------------------------------------------------
 st.markdown("""
 <style>
@@ -35,10 +34,14 @@ st.markdown("""
     .brand { font-size: 1.25rem; font-weight: 800; line-height: 1.25; color: white; }
     .brand-sub { color: #b7c9e3 !important; font-size: .82rem; margin-top: .45rem; }
 
+    /* Hero section with professional bank background overlay */
     .hero {
         padding: 2.1rem 2.2rem;
         border-radius: 22px;
-        background: linear-gradient(115deg, #09264b 0%, #12558a 65%, #167b91 100%);
+        background: linear-gradient(115deg, rgba(9, 38, 75, 0.92) 0%, rgba(18, 85, 138, 0.88) 65%, rgba(22, 123, 145, 0.90) 100%),
+                    url('https://images.unsplash.com/photo-1541354311742-74cb0e4865d3?auto=format&fit=crop&w=1200&q=80');
+        background-size: cover;
+        background-position: center;
         color: white;
         margin-bottom: 1.2rem;
         box-shadow: 0 12px 30px rgba(9,38,75,.15);
@@ -107,15 +110,17 @@ st.markdown("""
         filter: brightness(1.05);
     }
 
+    /* تعديل حجم خط المتركس لحل مشكلة اختصار النصوص الطويلة مثل Random Forest */
     [data-testid="stMetric"] {
         background: white;
         border: 1px solid #e2eaf4;
         border-radius: 15px;
-        padding: 1rem 1.1rem;
+        padding: 1rem 0.8rem;
     }
 
-    [data-testid="stMetric"] label { color: #61748d !important; }
-    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #102d52 !important; }
+    [data-testid="stMetric"] label { color: #61748d !important; font-size: 0.85rem !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #102d52 !important; font-size: 1.45rem !important; }
+    
     h2, h3 { color: #102d52; }
     footer { visibility: hidden; }
 </style>
@@ -571,44 +576,20 @@ elif page == "Model Performance":
         plt.close(fig)
 
     st.markdown(
-        '<div class="section-title">Cross-validation summary</div>',
+        '<div class="section-title">Model Limitations & Challenges (Demo Day Review)</div>',
         unsafe_allow_html=True
     )
 
-    results = pd.DataFrame({
-        "Model": [
-            "Random Forest",
-            "Logistic Regression",
-            "KNN",
-            "Decision Tree"
-        ],
-        "Accuracy": [0.8521, 0.7289, 0.8342, 0.7924],
-        "Precision": [0.7363, 0.4032, 0.6491, 0.4904],
-        "Recall": [0.4270, 0.6890, 0.4055, 0.4834],
-        "F1-score": [0.5404, 0.5085, 0.4989, 0.4867],
-        "ROC-AUC": [0.8440, 0.7804, 0.7749, 0.6774],
-    })
-
-    st.dataframe(
-        results.style.format({
-            col: "{:.2%}"
-            for col in [
-                "Accuracy",
-                "Precision",
-                "Recall",
-                "F1-score",
-                "ROC-AUC"
-            ]
-        }),
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.warning(
-        "Recall for the churn class is 42.51%, so the model misses "
-        "some customers who actually churn. This is an important "
-        "limitation to discuss."
-    )
+    st.markdown("""
+    <div class="soft-card">
+        <h3>⚠️ Challenges and Future Improvements</h3>
+        <ul>
+            <li><b>Class Imbalance:</b> Churned customers represent a smaller portion of the dataset, which affects the model's Recall (42.51%).</li>
+            <li><b>False Negatives:</b> The model occasionally misses customers who actually churn, highlighting an area for future threshold tuning or cost-sensitive learning.</li>
+            <li><b>Actionable Insight:</b> Combining these predictions with customer service follow-ups can help mitigate potential churn risks effectively.</li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 
 # ------------------------------------------------------------
