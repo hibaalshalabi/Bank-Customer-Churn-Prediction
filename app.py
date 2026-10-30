@@ -1,3 +1,4 @@
+
 import os
 import joblib
 import pandas as pd
@@ -16,6 +17,7 @@ st.set_page_config(
 
 MODEL_PATH = "best_churn_model.joblib"
 DATA_PATH = "Churn_Modelling_Featured.csv"
+RESULTS_PATH = "model_comparison_results.csv"
 
 # ------------------------------------------------------------
 # CUSTOM DESIGN & CSS
@@ -34,7 +36,6 @@ st.markdown("""
     .brand { font-size: 1.25rem; font-weight: 800; line-height: 1.25; color: white; }
     .brand-sub { color: #b7c9e3 !important; font-size: .82rem; margin-top: .45rem; }
 
-    /* Hero section with professional banking gradient */
     .hero {
         padding: 2.1rem 2.2rem;
         border-radius: 22px;
@@ -108,7 +109,6 @@ st.markdown("""
         filter: brightness(1.05);
     }
 
-    /* تعديل حجم خط المتركس لحل مشكلة اختصار النصوص الطويلة */
     [data-testid="stMetric"] {
         background: white;
         border: 1px solid #e2eaf4;
@@ -118,7 +118,7 @@ st.markdown("""
 
     [data-testid="stMetric"] label { color: #61748d !important; font-size: 0.85rem !important; }
     [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #102d52 !important; font-size: 1.45rem !important; }
-    
+
     h2, h3 { color: #102d52; }
     footer { visibility: hidden; }
 </style>
@@ -512,6 +512,9 @@ elif page == "Model Performance":
 
     left, right = st.columns(2)
 
+    # --------------------------------------------------------
+    # CONFUSION MATRIX - BLUE COLOR GRADIENT
+    # --------------------------------------------------------
     with left:
 
         st.markdown(
@@ -524,24 +527,43 @@ elif page == "Model Performance":
 
         matrix = [[1535, 58], [234, 173]]
 
-        ax.imshow(matrix, interpolation="nearest")
+        image = ax.imshow(
+            matrix,
+            interpolation="nearest",
+            cmap="Blues"
+        )
+
+        fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
+
         ax.set_title("Confusion Matrix")
         ax.set_xlabel("Predicted label")
         ax.set_ylabel("Actual label")
+
         ax.set_xticks([0, 1], labels=["Stayed (0)", "Churned (1)"])
         ax.set_yticks([0, 1], labels=["Stayed (0)", "Churned (1)"])
+
+        threshold = max(max(row) for row in matrix) / 2
 
         for i in range(2):
             for j in range(2):
                 ax.text(
-                    j, i, str(matrix[i][j]),
-                    ha="center", va="center", fontsize=12
+                    j,
+                    i,
+                    str(matrix[i][j]),
+                    ha="center",
+                    va="center",
+                    fontsize=13,
+                    fontweight="bold",
+                    color="white" if matrix[i][j] > threshold else "#102d52"
                 )
 
         fig.tight_layout()
         st.pyplot(fig, use_container_width=True)
         plt.close(fig)
 
+    # --------------------------------------------------------
+    # MODEL COMPARISON - READ FROM CSV FILE
+    # --------------------------------------------------------
     with right:
 
         st.markdown(
@@ -550,28 +572,45 @@ elif page == "Model Performance":
             unsafe_allow_html=True
         )
 
-        names = [
-            "Random Forest",
-            "Logistic Regression",
-            "KNN",
-            "Decision Tree"
-        ]
+        if os.path.exists(RESULTS_PATH):
 
-        scores = [0.5404, 0.5085, 0.4989, 0.4867]
+            try:
+                results = pd.read_csv(RESULTS_PATH)
 
-        fig, ax = plt.subplots(figsize=(5.2, 3.8))
+                required_columns = ["Model", "CV F1"]
 
-        bars = ax.bar(names, scores)
+                if all(column in results.columns for column in required_columns):
 
-        ax.set_ylim(0, 0.65)
-        ax.set_ylabel("Mean F1-score")
-        ax.set_title("Model Comparison")
-        ax.tick_params(axis="x", rotation=18)
-        ax.bar_label(bars, fmt="%.3f", padding=3)
+                    names = results["Model"]
+                    scores = results["CV F1"]
 
-        fig.tight_layout()
-        st.pyplot(fig, use_container_width=True)
-        plt.close(fig)
+                    fig, ax = plt.subplots(figsize=(5.2, 3.8))
+
+                    bars = ax.bar(names, scores, color="#1769e0")
+
+                    ax.set_ylim(0, 0.65)
+                    ax.set_ylabel("Mean F1-score")
+                    ax.set_title("Model Comparison")
+                    ax.tick_params(axis="x", rotation=18)
+                    ax.bar_label(bars, fmt="%.3f", padding=3)
+
+                    fig.tight_layout()
+                    st.pyplot(fig, use_container_width=True)
+                    plt.close(fig)
+
+                else:
+                    st.warning(
+                        "The comparison CSV must contain Model and CV F1 columns."
+                    )
+
+            except Exception as error:
+                st.error(f"Could not read model comparison file: {error}")
+
+        else:
+            st.warning(
+                "Model comparison file not found. "
+                "Please add model_comparison_results.csv to the project folder."
+            )
 
     st.markdown(
         '<div class="section-title">Model Limitations & Challenges (Demo Day Review)</div>',
