@@ -18,7 +18,7 @@ MODEL_PATH = "best_churn_model.joblib"
 DATA_PATH = "Churn_Modelling_Featured.csv"
 
 # ------------------------------------------------------------
-# CUSTOM DESIGN & CSS (مع حل مشكلة النصوص والخطوط)
+# CUSTOM DESIGN & CSS
 # ------------------------------------------------------------
 st.markdown("""
 <style>
@@ -34,17 +34,15 @@ st.markdown("""
     .brand { font-size: 1.25rem; font-weight: 800; line-height: 1.25; color: white; }
     .brand-sub { color: #b7c9e3 !important; font-size: .82rem; margin-top: .45rem; }
 
-    /* Hero section with professional bank background overlay */
+    /* Hero section with professional banking gradient */
     .hero {
         padding: 2.1rem 2.2rem;
         border-radius: 22px;
-        background: linear-gradient(115deg, rgba(9, 38, 75, 0.92) 0%, rgba(18, 85, 138, 0.88) 65%, rgba(22, 123, 145, 0.90) 100%),
-                    url('https://images.unsplash.com/photo-1541354311742-74cb0e4865d3?auto=format&fit=crop&w=1200&q=80');
-        background-size: cover;
-        background-position: center;
+        background: linear-gradient(135deg, #061a33 0%, #0d3b66 50%, #104f7a 100%);
         color: white;
         margin-bottom: 1.2rem;
-        box-shadow: 0 12px 30px rgba(9,38,75,.15);
+        box-shadow: 0 12px 30px rgba(9,38,75,.2);
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
     .hero h1 { color: white !important; font-size: 2.25rem; margin: .25rem 0 .6rem 0; }
     .hero p { color: #e1edf9 !important; font-size: 1rem; max-width: 800px; }
@@ -110,7 +108,7 @@ st.markdown("""
         filter: brightness(1.05);
     }
 
-    /* تعديل حجم خط المتركس لحل مشكلة اختصار النصوص الطويلة مثل Random Forest */
+    /* تعديل حجم خط المتركس لحل مشكلة اختصار النصوص الطويلة */
     [data-testid="stMetric"] {
         background: white;
         border: 1px solid #e2eaf4;
