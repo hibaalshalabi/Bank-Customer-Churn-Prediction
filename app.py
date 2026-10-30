@@ -109,32 +109,38 @@ if "Exited" not in data.columns:
 feature_data = data.drop(columns=["Exited"])
 feature_columns = feature_data.columns.tolist()
 
-# Initialize session state for page routing
+# Initialize session state for navigation
 pages = ["Home", "Predict Churn", "Model Performance", "About Project"]
-if "page" not in st.session_state:
-    st.session_state["page"] = "Home"
+if "current_page" not in st.session_state:
+    st.session_state["current_page"] = "Home"
 
-# Sidebar navigation linked with session_state
+# Sidebar navigation
 with st.sidebar:
     st.markdown("## 🏦 Bank Churn")
     st.markdown('<div class="brand">PREDICTOR</div>', unsafe_allow_html=True)
     st.markdown('<div class="brand-sub">Customer retention through data-driven insights</div>', unsafe_allow_html=True)
     st.markdown("---")
     
+    # Use index to control selected page from session state reliably
+    current_index = pages.index(st.session_state["current_page"])
     selected_page = st.radio(
         "NAVIGATION",
         pages,
-        index=pages.index(st.session_state["page"]),
-        key="selected_page_radio",
+        index=current_index,
+        key="nav_radio",
         label_visibility="visible",
     )
-    st.session_state["page"] = selected_page
+    
+    # Update session state if changed manually from sidebar
+    if selected_page != st.session_state["current_page"]:
+        st.session_state["current_page"] = selected_page
+        st.rerun()
 
     st.markdown("---")
     st.caption("Machine Learning • Random Forest")
     st.caption("A student project for customer churn analysis")
 
-page = st.session_state["page"]
+page = st.session_state["current_page"]
 
 # Hero header & Content based on active page
 if page == "Home":
@@ -172,9 +178,11 @@ if page == "Home":
         </div>
         """, unsafe_allow_html=True)
         st.write("")
+        # Fixed Start Button Action
         if st.button("Start a customer prediction →", use_container_width=True):
-            st.session_state["page"] = "Predict Churn"
+            st.session_state["current_page"] = "Predict Churn"
             st.rerun()
+            
     with right:
         st.markdown("""
         <div class="soft-card">
