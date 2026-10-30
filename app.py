@@ -1,656 +1,696 @@
-import streamlit as st
-import pandas as pd
-import joblib
-import os
-import numpy as np
 
-# =====================================================
-# PAGE CONFIG
-# =====================================================
+import os
+import joblib
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+
+# ------------------------------------------------------------
+# PAGE CONFIGURATION
+# ------------------------------------------------------------
 st.set_page_config(
-    page_title="Bank Churn Intelligence",
+    page_title="Bank Churn Predictor",
     page_icon="🏦",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 MODEL_PATH = "best_churn_model.joblib"
 DATA_PATH = "Churn_Modelling_Featured.csv"
-RESULTS_PATH = "model_comparison_results.csv"
 
-# =====================================================
-# LOAD MODEL AND DATA
-# =====================================================
-@st.cache_resource
-def load_model():
-    return joblib.load(MODEL_PATH)
-
-@st.cache_data
-def load_data():
-    return pd.read_csv(DATA_PATH)
-
-if not os.path.exists(MODEL_PATH):
-    st.error("Model file not found. Make sure best_churn_model.joblib is in the project folder.")
-    st.stop()
-
-if not os.path.exists(DATA_PATH):
-    st.error("Dataset not found. Make sure Churn_Modelling_Featured.csv is in the project folder.")
-    st.stop()
-
-try:
-    model = load_model()
-    df = load_data()
-except Exception as e:
-    st.error(f"Could not load the project files: {e}")
-    st.stop()
-
-# Target and feature columns
-target = "Exited"
-
-if target not in df.columns:
-    st.error("The dataset must contain the target column 'Exited'.")
-    st.stop()
-
-feature_columns = [col for col in df.columns if col != target]
-sample = df[feature_columns]
-
-# =====================================================
-# SESSION STATE AND NAVIGATION
-# =====================================================
-PAGES = ["Home", "Predict Churn", "Model Performance", "About Project"]
-
-if "nav_page" not in st.session_state:
-    st.session_state.nav_page = "Home"
-
-def go_to(page):
-    st.session_state.nav_page = page
-
-# =====================================================
-# CUSTOM CSS
-# =====================================================
+# ------------------------------------------------------------
+# CUSTOM DESIGN
+# ------------------------------------------------------------
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .stApp { background: #f4f7fb; }
 
-html, body, [class*="css"] {
-    font-family: 'Inter', sans-serif;
-}
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #071d3b 0%, #0b2b52 100%);
+    }
+    [data-testid="stSidebar"] * { color: #f3f7ff !important; }
 
-.stApp {
-    background: #F4F7FB;
-}
+    .brand { font-size: 1.25rem; font-weight: 800; line-height: 1.25; color: white; }
+    .brand-sub { color: #b7c9e3 !important; font-size: .82rem; margin-top: .45rem; }
 
-[data-testid="stSidebar"] {
-    background: #101D35;
-}
+    .hero {
+        padding: 2.1rem 2.2rem;
+        border-radius: 22px;
+        background: linear-gradient(115deg, #09264b 0%, #12558a 65%, #167b91 100%);
+        color: white;
+        margin-bottom: 1.2rem;
+        box-shadow: 0 12px 30px rgba(9,38,75,.15);
+    }
+    .hero h1 { color: white !important; font-size: 2.25rem; margin: .25rem 0 .6rem 0; }
+    .hero p { color: #e1edf9 !important; font-size: 1rem; max-width: 800px; }
 
-[data-testid="stSidebar"] * {
-    color: #FFFFFF !important;
-}
+    .eyebrow {
+        text-transform: uppercase;
+        letter-spacing: .15em;
+        font-size: .75rem;
+        font-weight: 700;
+        color: #9edee5;
+    }
 
-[data-testid="stSidebar"] [data-testid="stRadio"] label {
-    background: transparent;
-    border-radius: 9px;
-    padding: 9px 12px;
-}
+    .section-title {
+        color: #102d52;
+        font-size: 1.35rem;
+        font-weight: 800;
+        margin: .5rem 0 1rem 0;
+    }
 
-[data-testid="stSidebar"] [data-testid="stRadio"] label:hover {
-    background: #233653;
-}
+    .soft-card {
+        background: #ffffff;
+        border: 1px solid #e2eaf4;
+        border-radius: 17px;
+        padding: 1.15rem 1.25rem;
+        box-shadow: 0 5px 18px rgba(25,55,90,.045);
+        color: #102d52;
+    }
 
-.sidebar-title {
-    font-size: 23px;
-    font-weight: 800;
-    color: white;
-    margin: 12px 0 4px 0;
-}
+    .soft-card h3 { color: #102d52 !important; }
+    .soft-card p, .soft-card li { color: #334e68 !important; }
+    .muted { color: #486581 !important; }
 
-.sidebar-subtitle {
-    color: #AAB9CE;
-    font-size: 12px;
-    margin-bottom: 30px;
-}
+    .result-good {
+        border-radius: 18px;
+        padding: 1.5rem;
+        background: #e9faf4;
+        border: 1px solid #b7ead8;
+        color: #087b5b;
+    }
 
-.sidebar-footer {
-    color: #AAB9CE;
-    font-size: 11px;
-    margin-top: 45px;
-    border-top: 1px solid #34445D;
-    padding-top: 15px;
-}
+    .result-risk {
+        border-radius: 18px;
+        padding: 1.5rem;
+        background: #fff1ee;
+        border: 1px solid #ffd1c8;
+        color: #b53d2e;
+    }
 
-.hero {
-    background: linear-gradient(115deg, #10213D 0%, #1D4772 65%, #286B91 100%);
-    padding: 42px 42px;
-    border-radius: 20px;
-    color: white;
-    margin-bottom: 26px;
-    min-height: 245px;
-}
+    .result-title { font-size: 1.55rem; font-weight: 800; margin: .35rem 0; }
 
-.hero-tag {
-    color: #B8DDF5;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 2px;
-    text-transform: uppercase;
-}
+    div.stButton > button, div.stFormSubmitButton > button {
+        background: linear-gradient(90deg, #1769e0, #1389a0);
+        color: white;
+        border: 0;
+        border-radius: 10px;
+        font-weight: 700;
+        min-height: 2.8rem;
+    }
 
-.hero h1 {
-    color: white;
-    font-size: 36px;
-    font-weight: 800;
-    line-height: 1.2;
-    margin: 15px 0;
-}
+    div.stButton > button:hover, div.stFormSubmitButton > button:hover {
+        color: white;
+        border: 0;
+        filter: brightness(1.05);
+    }
 
-.hero p {
-    color: #D5E3F1;
-    font-size: 15px;
-    max-width: 650px;
-    line-height: 1.7;
-}
+    [data-testid="stMetric"] {
+        background: white;
+        border: 1px solid #e2eaf4;
+        border-radius: 15px;
+        padding: 1rem 1.1rem;
+    }
 
-.section-title {
-    color: #172B49;
-    font-size: 23px;
-    font-weight: 800;
-    margin: 20px 0 14px 0;
-}
-
-.metric-card {
-    background: white;
-    border: 1px solid #E5EAF1;
-    border-radius: 15px;
-    padding: 21px;
-    min-height: 115px;
-    box-shadow: 0 3px 12px rgba(20, 45, 75, 0.04);
-}
-
-.metric-label {
-    color: #718096;
-    font-size: 12px;
-    font-weight: 600;
-    margin-bottom: 10px;
-}
-
-.metric-value {
-    color: #17345A;
-    font-size: 27px;
-    font-weight: 800;
-}
-
-.metric-note {
-    color: #8190A5;
-    font-size: 11px;
-    margin-top: 5px;
-}
-
-.info-card {
-    background: white;
-    border: 1px solid #E5EAF1;
-    border-radius: 15px;
-    padding: 23px;
-    min-height: 145px;
-    box-shadow: 0 3px 12px rgba(20, 45, 75, 0.04);
-}
-
-.info-card h3 {
-    color: #18365C;
-    font-size: 17px;
-    margin-bottom: 9px;
-}
-
-.info-card p {
-    color: #718096;
-    font-size: 13px;
-    line-height: 1.6;
-}
-
-div.stButton > button {
-    background: #1D4F7A;
-    color: white;
-    border: none;
-    border-radius: 9px;
-    padding: 11px 18px;
-    font-weight: 700;
-    min-height: 43px;
-}
-
-div.stButton > button:hover {
-    background: #286B9B;
-    color: white;
-    border: none;
-}
-
-.result-box {
-    background: white;
-    border: 1px solid #E2E9F1;
-    border-radius: 16px;
-    padding: 25px;
-    margin-top: 15px;
-}
-
-.small-muted {
-    color: #78879A;
-    font-size: 12px;
-}
-
-h1, h2, h3 {
-    color: #172B49;
-}
-
-[data-testid="stMetric"] {
-    background: white;
-    border: 1px solid #E5EAF1;
-    padding: 16px;
-    border-radius: 13px;
-}
+    [data-testid="stMetric"] label { color: #61748d !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #102d52 !important; }
+    h2, h3 { color: #102d52; }
+    footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
-# =====================================================
+
+# ------------------------------------------------------------
+# LOAD MODEL AND DATA
+# ------------------------------------------------------------
+@st.cache_resource
+def load_model(path):
+    return joblib.load(path)
+
+
+@st.cache_data
+def load_data(path):
+    return pd.read_csv(path)
+
+
+if not os.path.exists(MODEL_PATH):
+    st.error(f"Model file not found: {MODEL_PATH}")
+    st.stop()
+
+if not os.path.exists(DATA_PATH):
+    st.error(f"Dataset file not found: {DATA_PATH}")
+    st.stop()
+
+try:
+    model = load_model(MODEL_PATH)
+    data = load_data(DATA_PATH)
+except Exception as error:
+    st.error(f"Could not load model or dataset: {error}")
+    st.stop()
+
+if "Exited" not in data.columns:
+    st.error("The dataset must contain the target column Exited.")
+    st.stop()
+
+feature_data = data.drop(columns=["Exited"])
+feature_columns = feature_data.columns.tolist()
+
+
+# ------------------------------------------------------------
+# NAVIGATION
+# ------------------------------------------------------------
+pages = [
+    "Home",
+    "Predict Churn",
+    "Model Performance",
+    "About Project"
+]
+
+
+def go_to_predict():
+    st.session_state["nav_radio"] = "Predict Churn"
+
+
+if "nav_radio" not in st.session_state:
+    st.session_state["nav_radio"] = "Home"
+
+
+# ------------------------------------------------------------
 # SIDEBAR
-# =====================================================
+# ------------------------------------------------------------
 with st.sidebar:
-    st.markdown('<div class="sidebar-title">🏦 CHURN AI</div>', unsafe_allow_html=True)
+    st.markdown("## 🏦 Bank Churn")
+    st.markdown('<div class="brand">PREDICTOR</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="sidebar-subtitle">BANK CUSTOMER INTELLIGENCE</div>',
+        '<div class="brand-sub">Customer retention through data-driven insights</div>',
         unsafe_allow_html=True
     )
-
     st.markdown("---")
-    st.caption("MAIN MENU")
 
     page = st.radio(
-        "Navigation",
-        PAGES,
-        key="nav_page",
-        label_visibility="collapsed"
+        "NAVIGATION",
+        pages,
+        key="nav_radio",
+        label_visibility="visible",
     )
 
     st.markdown("---")
-    st.markdown("**PROJECT OVERVIEW**")
-    st.markdown(
-        f"<div class='small-muted'>Dataset records: {len(df):,}</div>",
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        f"<div class='small-muted'>Input features: {len(feature_columns)}</div>",
-        unsafe_allow_html=True
-    )
+    st.caption("Machine Learning • Random Forest")
+    st.caption("A student project for customer churn analysis")
 
-    st.markdown(
-        '<div class="sidebar-footer">Bank Customer Churn Prediction<br>AI & Machine Learning Project</div>',
-        unsafe_allow_html=True
-    )
 
-# =====================================================
+# ------------------------------------------------------------
 # HOME PAGE
-# =====================================================
+# ------------------------------------------------------------
 if page == "Home":
 
     st.markdown("""
     <div class="hero">
-        <div class="hero-tag">AI POWERED CUSTOMER ANALYTICS</div>
-        <h1>Bank Customer<br>Churn Prediction</h1>
+        <div class="eyebrow">Customer intelligence platform</div>
+        <h1>Bank Customer Churn Prediction</h1>
         <p>
-            Understand customer behavior, identify customers at risk of leaving,
-            and support smarter business decisions using Machine Learning.
+        Understand customer churn risk with a machine-learning model.
+        Explore a customer profile, estimate churn probability, and use
+        the insights to support proactive retention decisions.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Project Overview</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">Project at a glance</div>',
+        unsafe_allow_html=True
+    )
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
 
-    with c1:
-        st.markdown("""
-        <div class="info-card">
-            <h3>📊 Customer Analysis</h3>
-            <p>Explore customer data and identify patterns that may be related to customer churn.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    c1.metric("Customer records", f"{len(data):,}")
+    c2.metric("Input features", f"{len(feature_columns)}")
+    c3.metric("Selected model", "Random Forest")
+    c4.metric("Test accuracy", "85.40%")
 
-    with c2:
-        st.markdown("""
-        <div class="info-card">
-            <h3>🤖 Machine Learning</h3>
-            <p>Use a trained Random Forest model to estimate the possibility of customer churn.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with c3:
-        st.markdown("""
-        <div class="info-card">
-            <h3>📈 Business Insights</h3>
-            <p>Turn model predictions into useful information that can support customer retention.</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-title">Explore the System</div>', unsafe_allow_html=True)
-
-    left, right = st.columns(2)
+    left, right = st.columns([1.15, 1])
 
     with left:
         st.markdown("""
-        <div class="info-card">
-            <h3>Customer Prediction</h3>
-            <p>Enter customer information and let the trained model predict the churn outcome.</p>
+        <div class="soft-card">
+            <h3>🎯 What this application does</h3>
+            <p class="muted">
+            Enter customer information and receive a model-based prediction
+            of whether the customer may leave the bank.
+            </p>
+            <ul>
+              <li>Creates a prediction from the saved trained model.</li>
+              <li>Displays the estimated probability of churn.</li>
+              <li>Summarizes the model's evaluation metrics.</li>
+            </ul>
         </div>
         """, unsafe_allow_html=True)
 
+        st.write("")
+
         st.button(
-            "Start a Customer Prediction →",
+            "Start a customer prediction →",
             use_container_width=True,
-            on_click=go_to,
-            args=("Predict Churn",)
+            on_click=go_to_predict
         )
 
     with right:
         st.markdown("""
-        <div class="info-card">
-            <h3>Model Performance</h3>
-            <p>Review the evaluation metrics and understand how the selected model performs.</p>
+        <div class="soft-card">
+            <h3>📌 Why churn prediction matters</h3>
+            <p class="muted">
+            Finding customers who may be at risk can help a bank prioritize
+            follow-up and design customer-retention strategies.
+            </p>
+            <hr>
+            <p><b>Important:</b> Predictions are estimates from a
+            machine-learning model, not guarantees of future behavior.</p>
         </div>
         """, unsafe_allow_html=True)
 
-        st.button(
-            "Explore Model Performance →",
-            use_container_width=True,
-            on_click=go_to,
-            args=("Model Performance",)
-        )
+    st.info(
+        "Use Predict Churn in the sidebar to enter customer details, "
+        "or Model Performance to review evaluation results."
+    )
 
-    st.markdown("---")
-    st.caption("Bank Customer Churn Prediction | Machine Learning Deployment")
 
-# =====================================================
-# PREDICTION PAGE
-# =====================================================
+# ------------------------------------------------------------
+# PREDICT CHURN PAGE
+# ------------------------------------------------------------
 elif page == "Predict Churn":
-
-    st.title("Customer Churn Prediction")
-    st.markdown(
-        "Enter the customer's information below to generate a prediction."
-    )
-    st.markdown("---")
-
-    st.markdown("### Customer Information")
-
-    values = {}
-
-    # Build input fields from the actual model dataset columns
-    columns = st.columns(2)
-
-    for i, col in enumerate(feature_columns):
-        with columns[i % 2]:
-            series = sample[col].dropna()
-
-            if series.empty:
-                values[col] = 0
-                continue
-
-            # Text / categorical columns
-            if (
-                pd.api.types.is_object_dtype(series)
-                or pd.api.types.is_bool_dtype(series)
-                or str(series.dtype) == "category"
-            ):
-                options = sorted(series.astype(str).unique().tolist())
-
-                if len(options) <= 30:
-                    values[col] = st.selectbox(
-                        col.replace("_", " ").title(),
-                        options,
-                        key=f"input_{col}"
-                    )
-                else:
-                    values[col] = st.text_input(
-                        col.replace("_", " ").title(),
-                        str(series.mode().iloc[0]),
-                        key=f"input_{col}"
-                    )
-
-            # Numeric columns with a small number of unique values
-            elif series.nunique() <= 10:
-                options = sorted(series.unique().tolist())
-
-                values[col] = st.selectbox(
-                    col.replace("_", " ").title(),
-                    options,
-                    key=f"input_{col}"
-                )
-
-            # Other numeric columns
-            else:
-                default = float(series.median())
-                minimum = float(series.min())
-                maximum = float(series.max())
-
-                if pd.api.types.is_integer_dtype(series):
-                    values[col] = st.number_input(
-                        col.replace("_", " ").title(),
-                        min_value=int(minimum),
-                        max_value=int(maximum),
-                        value=int(default),
-                        step=1,
-                        key=f"input_{col}"
-                    )
-                else:
-                    values[col] = st.number_input(
-                        col.replace("_", " ").title(),
-                        min_value=minimum,
-                        max_value=maximum,
-                        value=default,
-                        key=f"input_{col}"
-                    )
-
-    st.markdown("---")
-
-    if st.button("Predict Customer Churn", use_container_width=True):
-
-        try:
-            input_df = pd.DataFrame([values], columns=feature_columns)
-
-            # Match the original training column order
-            prediction = model.predict(input_df)[0]
-
-            st.markdown('<div class="result-box">', unsafe_allow_html=True)
-            st.markdown("### Prediction Result")
-
-            if int(prediction) == 1:
-                st.error("⚠️ This customer is predicted to leave the bank.")
-                st.markdown("**Prediction: Churn**")
-                st.write(
-                    "The model identifies this customer as belonging to the churn class."
-                )
-            else:
-                st.success("✅ This customer is predicted to stay with the bank.")
-                st.markdown("**Prediction: Stay**")
-                st.write(
-                    "The model identifies this customer as belonging to the retained customer class."
-                )
-
-            # Show probability when supported by the model
-            if hasattr(model, "predict_proba"):
-                probabilities = model.predict_proba(input_df)[0]
-                classes = list(model.classes_)
-
-                if 1 in classes:
-                    churn_probability = float(probabilities[classes.index(1)]) * 100
-                    st.metric("Churn Probability", f"{churn_probability:.1f}%")
-                    st.progress(churn_probability / 100)
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-        except Exception as e:
-            st.error(f"Prediction failed: {e}")
-            st.info(
-                "Please check that the model and dataset use the same features "
-                "and column order as the original training process."
-            )
-
-# =====================================================
-# MODEL PERFORMANCE PAGE
-# =====================================================
-elif page == "Model Performance":
-
-    st.title("Model Performance")
-    st.markdown(
-        "Evaluation results of the selected Random Forest model."
-    )
-    st.markdown("---")
-
-    # Reported test metrics from the project evaluation
-    metrics = [
-        ("Accuracy", "85.40%", "Overall correct predictions"),
-        ("Precision", "74.89%", "Correct churn predictions"),
-        ("Recall", "42.51%", "Churn customers identified"),
-        ("F1-Score", "54.23%", "Balance between precision and recall"),
-        ("ROC-AUC", "85.24%", "Ability to distinguish the classes")
-    ]
-
-    metric_cols = st.columns(5)
-
-    for col, item in zip(metric_cols, metrics):
-        with col:
-            st.markdown(f"""
-            <div class="metric-card">
-                <div class="metric-label">{item[0]}</div>
-                <div class="metric-value">{item[1]}</div>
-                <div class="metric-note">{item[2]}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-title">Confusion Matrix</div>', unsafe_allow_html=True)
-
-    cm = pd.DataFrame(
-        [[1535, 58], [234, 173]],
-        index=["Actual: Stayed", "Actual: Churned"],
-        columns=["Predicted: Stayed", "Predicted: Churned"]
-    )
-
-    st.dataframe(cm, use_container_width=True)
-
-    st.caption(
-        "The matrix shows the number of correct and incorrect predictions "
-        "for each customer class."
-    )
-
-    st.markdown('<div class="section-title">Model Evaluation</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="info-card">
-        <h3>Selected Model: Random Forest</h3>
-        <p>
-            Random Forest was selected based on its highest mean F1-score
-            during Stratified 5-Fold Cross-Validation among the evaluated models.
-        </p>
-        <p>
-            Cross-validation F1-score: <b>54.04%</b><br>
-            Cross-validation ROC-AUC: <b>84.40%</b>
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown('<div class="section-title">Model Comparison Results</div>', unsafe_allow_html=True)
-
-    if os.path.exists(RESULTS_PATH):
-        try:
-            results = pd.read_csv(RESULTS_PATH)
-            st.dataframe(results, use_container_width=True)
-
-            numeric_cols = results.select_dtypes(include=np.number).columns.tolist()
-
-            if numeric_cols:
-                selected_metric = st.selectbox(
-                    "Choose a metric to visualize",
-                    numeric_cols
-                )
-
-                st.bar_chart(
-                    results.set_index(results.columns[0])[[selected_metric]]
-                )
-
-        except Exception as e:
-            st.warning(f"Could not read model comparison results: {e}")
-    else:
-        st.info(
-            "The model comparison file is not available. "
-            "Add model_comparison_results.csv to display the comparison chart."
-        )
-
-# =====================================================
-# ABOUT PROJECT PAGE
-# =====================================================
-elif page == "About Project":
-
-    st.title("About the Project")
-    st.markdown(
-        "An end-to-end Machine Learning project for predicting bank customer churn."
-    )
-    st.markdown("---")
 
     st.markdown("""
     <div class="hero">
-        <div class="hero-tag">PROJECT DESCRIPTION</div>
-        <h1>Turning Customer Data<br>into Predictions</h1>
+        <div class="eyebrow">Customer risk assessment</div>
+        <h1>Predict Customer Churn</h1>
         <p>
-            This project aims to predict whether a bank customer is likely
-            to leave the bank using historical customer information and
-            Machine Learning techniques.
+        Fill in the customer details below.
+        The saved model will estimate the likelihood of churn.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown('<div class="section-title">Project Workflow</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-title">Customer information</div>',
+        unsafe_allow_html=True
+    )
 
-    steps = [
-        ("01", "Data Exploration", "Understand the dataset and explore its features."),
-        ("02", "Data Preprocessing", "Handle missing values, duplicates, and data quality issues."),
-        ("03", "Feature Engineering", "Prepare the features required for model training."),
-        ("04", "Modeling", "Train and evaluate multiple Machine Learning algorithms."),
-        ("05", "Model Selection", "Select Random Forest based on cross-validation F1-score."),
-        ("06", "Deployment", "Deploy the trained model through a Streamlit web application.")
+    customer_values = {}
+
+    with st.form("customer_form", clear_on_submit=False):
+
+        cols = st.columns(2)
+
+        for index, column in enumerate(feature_columns):
+
+            series = feature_data[column].dropna()
+
+            if series.empty:
+                st.error(f"No available values for {column}.")
+                st.stop()
+
+            with cols[index % 2]:
+
+                is_categorical = (
+                    pd.api.types.is_object_dtype(feature_data[column])
+                    or isinstance(feature_data[column].dtype, pd.CategoricalDtype)
+                    or pd.api.types.is_bool_dtype(feature_data[column])
+                )
+
+                if is_categorical:
+
+                    options = series.astype(str).unique().tolist()
+
+                    customer_values[column] = st.selectbox(
+                        column.replace("_", " "),
+                        options=options,
+                        key=f"input_{column}",
+                    )
+
+                elif pd.api.types.is_numeric_dtype(feature_data[column]):
+
+                    unique_values = sorted(series.unique().tolist())
+
+                    if len(unique_values) <= 2:
+
+                        customer_values[column] = st.selectbox(
+                            column.replace("_", " "),
+                            options=unique_values,
+                            format_func=lambda x: (
+                                str(int(x))
+                                if isinstance(x, (int, float))
+                                and float(x).is_integer()
+                                else str(x)
+                            ),
+                            key=f"input_{column}",
+                        )
+
+                    elif pd.api.types.is_integer_dtype(feature_data[column]):
+
+                        customer_values[column] = st.number_input(
+                            column.replace("_", " "),
+                            min_value=int(series.min()),
+                            max_value=int(series.max()),
+                            value=int(series.median()),
+                            step=1,
+                            key=f"input_{column}",
+                        )
+
+                    else:
+
+                        customer_values[column] = st.number_input(
+                            column.replace("_", " "),
+                            min_value=float(series.min()),
+                            max_value=float(series.max()),
+                            value=float(series.median()),
+                            key=f"input_{column}",
+                        )
+
+                else:
+
+                    options = series.astype(str).unique().tolist()
+
+                    customer_values[column] = st.selectbox(
+                        column.replace("_", " "),
+                        options=options,
+                        key=f"input_{column}",
+                    )
+
+        submitted = st.form_submit_button(
+            "✨ Predict Customer Churn",
+            use_container_width=True
+        )
+
+    if submitted:
+
+        input_df = pd.DataFrame(
+            [customer_values],
+            columns=feature_columns
+        )
+
+        for column in feature_columns:
+            if pd.api.types.is_numeric_dtype(feature_data[column]):
+                input_df[column] = pd.to_numeric(
+                    input_df[column],
+                    errors="coerce"
+                )
+
+        try:
+
+            prediction = int(model.predict(input_df)[0])
+
+            probabilities = model.predict_proba(input_df)[0]
+            classes = list(model.classes_)
+
+            churn_probability = float(
+                probabilities[classes.index(1)]
+            )
+
+            st.markdown(
+                '<div class="section-title">Prediction result</div>',
+                unsafe_allow_html=True
+            )
+
+            result_col, probability_col = st.columns([1.1, 1])
+
+            with result_col:
+
+                if prediction == 1:
+
+                    st.markdown("""
+                    <div class="result-risk">
+                      <div>⚠️ HIGHER CHURN CONCERN</div>
+                      <div class="result-title">Predicted to leave</div>
+                      <div>
+                      The model classifies this customer as likely to churn.
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+                else:
+
+                    st.markdown("""
+                    <div class="result-good">
+                      <div>✓ RETENTION OUTLOOK</div>
+                      <div class="result-title">Predicted to stay</div>
+                      <div>
+                      The model classifies this customer as likely to remain
+                      with the bank.
+                      </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            with probability_col:
+
+                st.markdown(
+                    '<div class="soft-card">',
+                    unsafe_allow_html=True
+                )
+
+                st.metric(
+                    "Estimated churn probability",
+                    f"{churn_probability:.1%}"
+                )
+
+                st.progress(churn_probability)
+                st.caption("Probability estimated by the trained model.")
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            st.caption(
+                "This is a model prediction, not a guarantee "
+                "of the customer's future behavior."
+            )
+
+        except Exception as error:
+
+            st.error(f"Prediction failed: {error}")
+            st.info(
+                "Check that the model and dataset were created "
+                "using the same feature columns."
+            )
+
+
+# ------------------------------------------------------------
+# MODEL PERFORMANCE PAGE
+# ------------------------------------------------------------
+elif page == "Model Performance":
+
+    st.markdown("""
+    <div class="hero">
+        <div class="eyebrow">Evaluation and validation</div>
+        <h1>Model Performance</h1>
+        <p>
+        Results from the final test set and cross-validation comparison
+        of the trained classifiers.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="section-title">Random Forest — test set</div>',
+        unsafe_allow_html=True
+    )
+
+    m1, m2, m3, m4, m5 = st.columns(5)
+
+    m1.metric("Accuracy", "85.40%")
+    m2.metric("Precision", "74.89%")
+    m3.metric("Recall", "42.51%")
+    m4.metric("F1-score", "54.23%")
+    m5.metric("ROC-AUC", "85.24%")
+
+    st.caption(
+        "The model was selected using the highest mean F1-score "
+        "across stratified 5-fold cross-validation."
+    )
+
+    left, right = st.columns(2)
+
+    with left:
+
+        st.markdown(
+            '<div class="soft-card"><h3>Confusion matrix</h3>'
+            '<p class="muted">Actual vs. predicted labels on the 2,000-row test set.</p></div>',
+            unsafe_allow_html=True
+        )
+
+        fig, ax = plt.subplots(figsize=(5.2, 3.8))
+
+        matrix = [[1535, 58], [234, 173]]
+
+        ax.imshow(matrix, interpolation="nearest")
+        ax.set_title("Confusion Matrix")
+        ax.set_xlabel("Predicted label")
+        ax.set_ylabel("Actual label")
+        ax.set_xticks([0, 1], labels=["Stayed (0)", "Churned (1)"])
+        ax.set_yticks([0, 1], labels=["Stayed (0)", "Churned (1)"])
+
+        for i in range(2):
+            for j in range(2):
+                ax.text(
+                    j, i, str(matrix[i][j]),
+                    ha="center", va="center", fontsize=12
+                )
+
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
+
+    with right:
+
+        st.markdown(
+            '<div class="soft-card"><h3>Cross-validation F1-score</h3>'
+            '<p class="muted">Mean F1-score for each candidate model.</p></div>',
+            unsafe_allow_html=True
+        )
+
+        names = [
+            "Random Forest",
+            "Logistic Regression",
+            "KNN",
+            "Decision Tree"
+        ]
+
+        scores = [0.5404, 0.5085, 0.4989, 0.4867]
+
+        fig, ax = plt.subplots(figsize=(5.2, 3.8))
+
+        bars = ax.bar(names, scores)
+
+        ax.set_ylim(0, 0.65)
+        ax.set_ylabel("Mean F1-score")
+        ax.set_title("Model Comparison")
+        ax.tick_params(axis="x", rotation=18)
+        ax.bar_label(bars, fmt="%.3f", padding=3)
+
+        fig.tight_layout()
+        st.pyplot(fig, use_container_width=True)
+        plt.close(fig)
+
+    st.markdown(
+        '<div class="section-title">Cross-validation summary</div>',
+        unsafe_allow_html=True
+    )
+
+    results = pd.DataFrame({
+        "Model": [
+            "Random Forest",
+            "Logistic Regression",
+            "KNN",
+            "Decision Tree"
+        ],
+        "Accuracy": [0.8521, 0.7289, 0.8342, 0.7924],
+        "Precision": [0.7363, 0.4032, 0.6491, 0.4904],
+        "Recall": [0.4270, 0.6890, 0.4055, 0.4834],
+        "F1-score": [0.5404, 0.5085, 0.4989, 0.4867],
+        "ROC-AUC": [0.8440, 0.7804, 0.7749, 0.6774],
+    })
+
+    st.dataframe(
+        results.style.format({
+            col: "{:.2%}"
+            for col in [
+                "Accuracy",
+                "Precision",
+                "Recall",
+                "F1-score",
+                "ROC-AUC"
+            ]
+        }),
+        use_container_width=True,
+        hide_index=True
+    )
+
+    st.warning(
+        "Recall for the churn class is 42.51%, so the model misses "
+        "some customers who actually churn. This is an important "
+        "limitation to discuss."
+    )
+
+
+# ------------------------------------------------------------
+# ABOUT PROJECT PAGE
+# ------------------------------------------------------------
+elif page == "About Project":
+
+    st.markdown("""
+    <div class="hero">
+        <div class="eyebrow">Project documentation</div>
+        <h1>About the Project</h1>
+        <p>
+        An end-to-end machine-learning project focused on identifying
+        bank customers who may leave.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown(
+        '<div class="section-title">Project workflow</div>',
+        unsafe_allow_html=True
+    )
+
+    steps = st.columns(4)
+
+    workflow = [
+        ("01", "Data cleaning",
+         "Handled missing values, duplicates, and data-quality issues."),
+        ("02", "EDA & features",
+         "Explored churn patterns and created useful features."),
+        ("03", "Modeling",
+         "Compared four classifiers using stratified cross-validation."),
+        ("04", "Deployment",
+         "Built an interactive Streamlit application for predictions."),
     ]
 
-    for number, title, description in steps:
-        st.markdown(f"""
-        <div class="info-card" style="min-height:90px; margin-bottom:12px;">
-            <h3>{number} · {title}</h3>
-            <p>{description}</p>
-        </div>
-        """, unsafe_allow_html=True)
+    for col, (number, title, description) in zip(steps, workflow):
 
-    st.markdown('<div class="section-title">Technologies Used</div>', unsafe_allow_html=True)
+        with col:
 
-    tech1, tech2, tech3 = st.columns(3)
+            st.markdown(
+                f'<div class="soft-card">'
+                f'<div class="eyebrow">{number}</div>'
+                f'<h3>{title}</h3>'
+                f'<p class="muted">{description}</p>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
-    with tech1:
-        st.markdown("""
-        <div class="info-card">
-            <h3>Python</h3>
-            <p>Main programming language used for data processing and model development.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("")
 
-    with tech2:
-        st.markdown("""
-        <div class="info-card">
-            <h3>Scikit-learn</h3>
-            <p>Used to build, train, and evaluate Machine Learning models.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    st.markdown("""
+    <div class="soft-card">
+      <h3>🎯 Project objective</h3>
+      <p class="muted">
+      Predict whether a bank customer is likely to leave, helping inform
+      customer-retention decisions.
+      </p>
 
-    with tech3:
-        st.markdown("""
-        <div class="info-card">
-            <h3>Streamlit</h3>
-            <p>Used to create and deploy the interactive web application.</p>
-        </div>
-        """, unsafe_allow_html=True)
+      <h3>🧰 Technologies</h3>
+      <p class="muted">
+      Python · Pandas · Scikit-learn · Joblib · Streamlit · Matplotlib
+      </p>
 
-    st.markdown("---")
-    st.caption("Bank Customer Churn Prediction | AI & Machine Learning Project")
+      <h3>⚠️ Responsible use</h3>
+      <p class="muted">
+      The output is a statistical estimate and should be considered
+      alongside human review and other relevant information.
+      </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+# ------------------------------------------------------------
+# FOOTER
+# ------------------------------------------------------------
+st.markdown("---")
+
+st.markdown(
+    '<div style="text-align:center;color:#71839a;'
+    'font-size:.8rem;padding:.4rem 0 1rem 0;">'
+    'Bank Customer Churn Prediction · Machine Learning Project · '
+    'Built with Streamlit</div>',
+    unsafe_allow_html=True
+)
