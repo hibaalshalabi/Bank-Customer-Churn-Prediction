@@ -1,4 +1,3 @@
-
 import os
 import joblib
 import pandas as pd
@@ -25,35 +24,16 @@ RESULTS_PATH = "model_comparison_results.csv"
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-    }
-
-    .stApp {
-        background: #f4f7fb;
-    }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
+    .stApp { background: #f4f7fb; }
 
     [data-testid="stSidebar"] {
         background: linear-gradient(180deg, #071d3b 0%, #0b2b52 100%);
     }
+    [data-testid="stSidebar"] * { color: #f3f7ff !important; }
 
-    [data-testid="stSidebar"] * {
-        color: #f3f7ff !important;
-    }
-
-    .brand {
-        font-size: 1.25rem;
-        font-weight: 800;
-        line-height: 1.25;
-        color: white;
-    }
-
-    .brand-sub {
-        color: #b7c9e3 !important;
-        font-size: .82rem;
-        margin-top: .45rem;
-    }
+    .brand { font-size: 1.25rem; font-weight: 800; line-height: 1.25; color: white; }
+    .brand-sub { color: #b7c9e3 !important; font-size: .82rem; margin-top: .45rem; }
 
     .hero {
         padding: 2.1rem 2.2rem;
@@ -64,18 +44,8 @@ st.markdown("""
         box-shadow: 0 12px 30px rgba(9,38,75,.2);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-
-    .hero h1 {
-        color: white !important;
-        font-size: 2.25rem;
-        margin: .25rem 0 .6rem 0;
-    }
-
-    .hero p {
-        color: #e1edf9 !important;
-        font-size: 1rem;
-        max-width: 800px;
-    }
+    .hero h1 { color: white !important; font-size: 2.25rem; margin: .25rem 0 .6rem 0; }
+    .hero p { color: #e1edf9 !important; font-size: 1rem; max-width: 800px; }
 
     .eyebrow {
         text-transform: uppercase;
@@ -92,6 +62,14 @@ st.markdown("""
         margin: .5rem 0 1rem 0;
     }
 
+    .field-label {
+        color: #102d52;
+        font-size: 0.92rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+        margin-top: 0.6rem;
+    }
+
     .soft-card {
         background: #ffffff;
         border: 1px solid #e2eaf4;
@@ -101,17 +79,9 @@ st.markdown("""
         color: #102d52;
     }
 
-    .soft-card h3 {
-        color: #102d52 !important;
-    }
-
-    .soft-card p, .soft-card li {
-        color: #334e68 !important;
-    }
-
-    .muted {
-        color: #486581 !important;
-    }
+    .soft-card h3 { color: #102d52 !important; }
+    .soft-card p, .soft-card li { color: #334e68 !important; }
+    .muted { color: #486581 !important; }
 
     .result-good {
         border-radius: 18px;
@@ -129,11 +99,7 @@ st.markdown("""
         color: #b53d2e;
     }
 
-    .result-title {
-        font-size: 1.55rem;
-        font-weight: 800;
-        margin: .35rem 0;
-    }
+    .result-title { font-size: 1.55rem; font-weight: 800; margin: .35rem 0; }
 
     div.stButton > button, div.stFormSubmitButton > button {
         background: linear-gradient(90deg, #1769e0, #1389a0);
@@ -157,23 +123,11 @@ st.markdown("""
         padding: 1rem 0.8rem;
     }
 
-    [data-testid="stMetric"] label {
-        color: #61748d !important;
-        font-size: 0.85rem !important;
-    }
+    [data-testid="stMetric"] label { color: #61748d !important; font-size: 0.85rem !important; }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] { color: #102d52 !important; font-size: 1.45rem !important; }
 
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        color: #102d52 !important;
-        font-size: 1.45rem !important;
-    }
-
-    h2, h3 {
-        color: #102d52;
-    }
-
-    footer {
-        visibility: hidden;
-    }
+    h2, h3 { color: #102d52; }
+    footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -202,7 +156,6 @@ if not os.path.exists(DATA_PATH):
 try:
     model = load_model(MODEL_PATH)
     data = load_data(DATA_PATH)
-
 except Exception as error:
     st.error(f"Could not load model or dataset: {error}")
     st.stop()
@@ -213,45 +166,6 @@ if "Exited" not in data.columns:
 
 feature_data = data.drop(columns=["Exited"])
 feature_columns = feature_data.columns.tolist()
-
-
-# ------------------------------------------------------------
-# FRIENDLY FEATURE NAMES AND DESCRIPTIONS
-# ------------------------------------------------------------
-
-feature_labels = {
-    "CreditScore": "Credit Score",
-    "Geography": "Country",
-    "Gender": "Gender",
-    "Age": "Customer Age",
-    "Tenure": "Years with Bank",
-    "Balance": "Account Balance",
-    "NumOfProducts": "Number of Bank Products",
-    "HasCrCard": "Credit Card Ownership",
-    "IsActiveMember": "Active Membership",
-    "EstimatedSalary": "Estimated Annual Salary",
-    "BalanceSalaryRatio": "Balance to Salary Ratio",
-    "AgeGroup": "Customer Age Group",
-    "CreditScoreGroup": "Credit Score Group",
-    "TenureGroup": "Customer Tenure Group",
-}
-
-feature_descriptions = {
-    "CreditScore": "التقييم الائتماني للعميل. | The customer's credit score.",
-    "Geography": "الدولة التي يقيم فيها العميل. | The customer's country.",
-    "Gender": "جنس العميل. | The customer's gender.",
-    "Age": "عمر العميل بالسنوات. | The customer's age in years.",
-    "Tenure": "عدد سنوات تعامل العميل مع البنك. | Years the customer has been with the bank.",
-    "Balance": "رصيد حساب العميل في البنك. | The customer's bank account balance.",
-    "NumOfProducts": "عدد منتجات البنك التي يستخدمها العميل. | Number of bank products used.",
-    "HasCrCard": "هل يمتلك العميل بطاقة ائتمانية؟ | Does the customer have a credit card?",
-    "IsActiveMember": "هل العميل عضو نشط في البنك؟ | Is the customer an active bank member?",
-    "EstimatedSalary": "الراتب السنوي التقديري للعميل. | The customer's estimated annual salary.",
-    "BalanceSalaryRatio": "نسبة رصيد الحساب إلى الراتب. | Account balance compared with salary.",
-    "AgeGroup": "الفئة العمرية للعميل. | The customer's age category.",
-    "CreditScoreGroup": "فئة التقييم الائتماني للعميل. | The customer's credit score category.",
-    "TenureGroup": "فئة سنوات تعامل العميل مع البنك. | The customer's tenure category.",
-}
 
 
 # ------------------------------------------------------------
@@ -277,19 +191,12 @@ if "nav_radio" not in st.session_state:
 # SIDEBAR
 # ------------------------------------------------------------
 with st.sidebar:
-
     st.markdown("## 🏦 Bank Churn")
-
-    st.markdown(
-        '<div class="brand">PREDICTOR</div>',
-        unsafe_allow_html=True
-    )
-
+    st.markdown('<div class="brand">PREDICTOR</div>', unsafe_allow_html=True)
     st.markdown(
         '<div class="brand-sub">Customer retention through data-driven insights</div>',
         unsafe_allow_html=True
     )
-
     st.markdown("---")
 
     page = st.radio(
@@ -300,7 +207,6 @@ with st.sidebar:
     )
 
     st.markdown("---")
-
     st.caption("Machine Learning • Random Forest")
     st.caption("A student project for customer churn analysis")
 
@@ -337,7 +243,6 @@ if page == "Home":
     left, right = st.columns([1.15, 1])
 
     with left:
-
         st.markdown("""
         <div class="soft-card">
             <h3>🎯 What this application does</h3>
@@ -362,7 +267,6 @@ if page == "Home":
         )
 
     with right:
-
         st.markdown("""
         <div class="soft-card">
             <h3>📌 Why churn prediction matters</h3>
@@ -393,20 +297,14 @@ elif page == "Predict Churn":
         <h1>Predict Customer Churn</h1>
         <p>
         Fill in the customer details below.
-        Each field includes a clear name and description.
         The saved model will estimate the likelihood of churn.
         </p>
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown(
-        '<div class="section-title">Customer Information</div>',
+        '<div class="section-title">Customer information</div>',
         unsafe_allow_html=True
-    )
-
-    st.info(
-        "Please enter the customer's information. "
-        "Each field has an English name and an Arabic explanation."
     )
 
     customer_values = {}
@@ -423,29 +321,14 @@ elif page == "Predict Churn":
                 st.error(f"No available values for {column}.")
                 st.stop()
 
-            # Friendly name for the input
-            label = feature_labels.get(
-                column,
-                column.replace("_", " ").replace("-", " ").title()
-            )
-
-            # Explanation for the input
-            description = feature_descriptions.get(
-                column,
-                f"أدخل قيمة {label}. | Enter the value for {label.lower()}."
-            )
-
             with cols[index % 2]:
-
-                st.markdown(f"**{label}**")
-                st.caption(description)
+                
+                # وضع اسم العمود الأصلي من الداتا فريم بحرفيته كعنوان فوق الحقل
+                st.markdown(f'<div class="field-label">📌 {column}</div>', unsafe_allow_html=True)
 
                 is_categorical = (
                     pd.api.types.is_object_dtype(feature_data[column])
-                    or isinstance(
-                        feature_data[column].dtype,
-                        pd.CategoricalDtype
-                    )
+                    or isinstance(feature_data[column].dtype, pd.CategoricalDtype)
                     or pd.api.types.is_bool_dtype(feature_data[column])
                 )
 
@@ -454,10 +337,10 @@ elif page == "Predict Churn":
                     options = series.astype(str).unique().tolist()
 
                     customer_values[column] = st.selectbox(
-                        label,
+                        column,
                         options=options,
                         key=f"input_{column}",
-                        label_visibility="collapsed",
+                        label_visibility="collapsed"
                     )
 
                 elif pd.api.types.is_numeric_dtype(feature_data[column]):
@@ -467,7 +350,7 @@ elif page == "Predict Churn":
                     if len(unique_values) <= 2:
 
                         customer_values[column] = st.selectbox(
-                            label,
+                            column,
                             options=unique_values,
                             format_func=lambda x: (
                                 str(int(x))
@@ -476,30 +359,30 @@ elif page == "Predict Churn":
                                 else str(x)
                             ),
                             key=f"input_{column}",
-                            label_visibility="collapsed",
+                            label_visibility="collapsed"
                         )
 
                     elif pd.api.types.is_integer_dtype(feature_data[column]):
 
                         customer_values[column] = st.number_input(
-                            label,
+                            column,
                             min_value=int(series.min()),
                             max_value=int(series.max()),
                             value=int(series.median()),
                             step=1,
                             key=f"input_{column}",
-                            label_visibility="collapsed",
+                            label_visibility="collapsed"
                         )
 
                     else:
 
                         customer_values[column] = st.number_input(
-                            label,
+                            column,
                             min_value=float(series.min()),
                             max_value=float(series.max()),
                             value=float(series.median()),
                             key=f"input_{column}",
-                            label_visibility="collapsed",
+                            label_visibility="collapsed"
                         )
 
                 else:
@@ -507,10 +390,10 @@ elif page == "Predict Churn":
                     options = series.astype(str).unique().tolist()
 
                     customer_values[column] = st.selectbox(
-                        label,
+                        column,
                         options=options,
                         key=f"input_{column}",
-                        label_visibility="collapsed",
+                        label_visibility="collapsed"
                     )
 
         submitted = st.form_submit_button(
@@ -526,9 +409,7 @@ elif page == "Predict Churn":
         )
 
         for column in feature_columns:
-
             if pd.api.types.is_numeric_dtype(feature_data[column]):
-
                 input_df[column] = pd.to_numeric(
                     input_df[column],
                     errors="coerce"
@@ -546,7 +427,7 @@ elif page == "Predict Churn":
             )
 
             st.markdown(
-                '<div class="section-title">Prediction Result</div>',
+                '<div class="section-title">Prediction result</div>',
                 unsafe_allow_html=True
             )
 
@@ -592,10 +473,7 @@ elif page == "Predict Churn":
                 )
 
                 st.progress(churn_probability)
-
-                st.caption(
-                    "Probability estimated by the trained model."
-                )
+                st.caption("Probability estimated by the trained model.")
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -607,7 +485,6 @@ elif page == "Predict Churn":
         except Exception as error:
 
             st.error(f"Prediction failed: {error}")
-
             st.info(
                 "Check that the model and dataset were created "
                 "using the same feature columns."
@@ -651,7 +528,7 @@ elif page == "Model Performance":
     left, right = st.columns(2)
 
     # --------------------------------------------------------
-    # CONFUSION MATRIX
+    # CONFUSION MATRIX - BLUE COLOR GRADIENT
     # --------------------------------------------------------
     with left:
 
@@ -684,7 +561,6 @@ elif page == "Model Performance":
 
         for i in range(2):
             for j in range(2):
-
                 ax.text(
                     j,
                     i,
@@ -697,13 +573,11 @@ elif page == "Model Performance":
                 )
 
         fig.tight_layout()
-
         st.pyplot(fig, use_container_width=True)
-
         plt.close(fig)
 
     # --------------------------------------------------------
-    # MODEL COMPARISON FROM CSV
+    # MODEL COMPARISON - READ FROM CSV FILE
     # --------------------------------------------------------
     with right:
 
@@ -716,7 +590,6 @@ elif page == "Model Performance":
         if os.path.exists(RESULTS_PATH):
 
             try:
-
                 results = pd.read_csv(RESULTS_PATH)
 
                 required_columns = ["Model", "CV F1"]
@@ -728,43 +601,27 @@ elif page == "Model Performance":
 
                     fig, ax = plt.subplots(figsize=(5.2, 3.8))
 
-                    bars = ax.bar(
-                        names,
-                        scores,
-                        color="#1769e0"
-                    )
+                    bars = ax.bar(names, scores, color="#1769e0")
 
                     ax.set_ylim(0, 0.65)
                     ax.set_ylabel("Mean F1-score")
                     ax.set_title("Model Comparison")
                     ax.tick_params(axis="x", rotation=18)
-
-                    ax.bar_label(
-                        bars,
-                        fmt="%.3f",
-                        padding=3
-                    )
+                    ax.bar_label(bars, fmt="%.3f", padding=3)
 
                     fig.tight_layout()
-
                     st.pyplot(fig, use_container_width=True)
-
                     plt.close(fig)
 
                 else:
-
                     st.warning(
                         "The comparison CSV must contain Model and CV F1 columns."
                     )
 
             except Exception as error:
-
-                st.error(
-                    f"Could not read model comparison file: {error}"
-                )
+                st.error(f"Could not read model comparison file: {error}")
 
         else:
-
             st.warning(
                 "Model comparison file not found. "
                 "Please add model_comparison_results.csv to the project folder."
