@@ -175,7 +175,6 @@ pages = [
     "Home",
     "Predict Churn",
     "Model Performance",
-    "Batch Prediction",
     "About Project"
 ]
 
@@ -283,7 +282,7 @@ if page == "Home":
 
     st.info(
         "Use Predict Churn in the sidebar to enter customer details, "
-        "Model Performance to review evaluation results, or Batch Prediction to analyze a CSV file."
+        "or Model Performance to review evaluation results."
     )
 
 
@@ -420,14 +419,8 @@ elif page == "Predict Churn":
 
             prediction = int(model.predict(input_df)[0])
 
-            if not hasattr(model, "predict_proba"):
-                raise ValueError("The saved model does not support probability estimates.")
-
             probabilities = model.predict_proba(input_df)[0]
             classes = list(model.classes_)
-
-            if 1 not in classes:
-                raise ValueError("The saved model does not contain the churn class (1).")
 
             churn_probability = float(
                 probabilities[classes.index(1)]
@@ -649,167 +642,6 @@ elif page == "Model Performance":
         </ul>
     </div>
     """, unsafe_allow_html=True)
-
-
-
-# ------------------------------------------------------------
-# BATCH PREDICTION PAGE
-# ------------------------------------------------------------
-elif page == "Batch Prediction":
-
-    st.markdown("""
-    <div class="hero">
-        <div class="eyebrow">Bulk customer assessment</div>
-        <h1>Batch Customer Prediction</h1>
-        <p>
-        Upload a CSV file containing customer features to generate churn
-        predictions and estimated probabilities for multiple customers.
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown(
-        '<div class="section-title">Upload customer data</div>',
-        unsafe_allow_html=True
-    )
-
-    st.write(
-        "The uploaded file must contain the same input feature columns used "
-        "when training the saved model. Do not include the target column `Exited`."
-    )
-
-    with st.expander("View required feature columns"):
-        st.code(", ".join(feature_columns), language="text")
-
-    uploaded_file = st.file_uploader(
-        "Choose a customer CSV file",
-        type=["csv"],
-        help="Upload a CSV file with the model's input features."
-    )
-
-    if uploaded_file is not None:
-        try:
-            batch_data = pd.read_csv(uploaded_file)
-
-            if batch_data.empty:
-                st.error("The uploaded CSV file is empty.")
-            else:
-                st.subheader("Uploaded data preview")
-                st.dataframe(batch_data.head(10), use_container_width=True)
-
-                missing_columns = [
-                    column for column in feature_columns
-                    if column not in batch_data.columns
-                ]
-                extra_columns = [
-                    column for column in batch_data.columns
-                    if column not in feature_columns and column != "Exited"
-                ]
-
-                if missing_columns:
-                    st.error(
-                        "The uploaded file is missing required columns: "
-                        + ", ".join(missing_columns)
-                    )
-                else:
-                    if extra_columns:
-                        st.warning(
-                            "Extra columns will be ignored: "
-                            + ", ".join(extra_columns)
-                        )
-
-                    # Keep the exact feature order used by the training data.
-                    batch_input = batch_data.reindex(columns=feature_columns).copy()
-
-                    # Convert numeric features safely, matching the training schema.
-                    conversion_errors = []
-                    for column in feature_columns:
-                        if pd.api.types.is_numeric_dtype(feature_data[column]):
-                            converted = pd.to_numeric(
-                                batch_input[column], errors="coerce"
-                            )
-                            if converted.isna().any() and not batch_input[column].isna().all():
-                                conversion_errors.append(column)
-                            batch_input[column] = converted
-
-                    if conversion_errors:
-                        st.error(
-                            "Some values could not be converted to numbers in: "
-                            + ", ".join(conversion_errors)
-                        )
-                    elif batch_input.isna().any().any():
-                        st.error(
-                            "The uploaded feature data contains missing values. "
-                            "Please clean or fill them before prediction."
-                        )
-                    else:
-                        if st.button(
-                            "Run batch predictions",
-                            type="primary",
-                            use_container_width=True
-                        ):
-                            try:
-                                predictions = model.predict(batch_input)
-                                output_data = batch_data.copy()
-                                output_data["Churn_Prediction"] = predictions
-
-                                if hasattr(model, "predict_proba"):
-                                    probabilities = model.predict_proba(batch_input)
-                                    model_classes = list(model.classes_)
-
-                                    if 1 in model_classes:
-                                        churn_index = model_classes.index(1)
-                                        output_data["Churn_Probability"] = (
-                                            probabilities[:, churn_index]
-                                        )
-                                    else:
-                                        st.warning(
-                                            "The model does not contain class 1; "
-                                            "churn probabilities could not be added."
-                                        )
-
-                                st.success(
-                                    f"Predictions completed for {len(output_data):,} customers."
-                                )
-
-                                churn_count = int(
-                                    (output_data["Churn_Prediction"] == 1).sum()
-                                )
-                                stay_count = len(output_data) - churn_count
-
-                                metric_1, metric_2, metric_3 = st.columns(3)
-                                metric_1.metric("Customers analyzed", f"{len(output_data):,}")
-                                metric_2.metric("Predicted to churn", f"{churn_count:,}")
-                                metric_3.metric("Predicted to stay", f"{stay_count:,}")
-
-                                st.subheader("Prediction results")
-                                st.dataframe(
-                                    output_data,
-                                    use_container_width=True
-                                )
-
-                                csv_bytes = output_data.to_csv(
-                                    index=False
-                                ).encode("utf-8-sig")
-
-                                st.download_button(
-                                    "Download prediction results",
-                                    data=csv_bytes,
-                                    file_name="churn_predictions_results.csv",
-                                    mime="text/csv",
-                                    use_container_width=True
-                                )
-
-                            except Exception as error:
-                                st.error(f"Batch prediction failed: {error}")
-                                st.info(
-                                    "Please verify that the uploaded columns and "
-                                    "their data types match the model's training features."
-                                )
-
-        except Exception as error:
-            st.error(f"Could not read the uploaded CSV file: {error}")
-            st.info("Please upload a valid CSV file.")
 
 
 # ------------------------------------------------------------
